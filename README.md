@@ -6,7 +6,7 @@
 ## Установка
 
 ```bash
-git clone <URL этого репозитория> st7796-pi
+git clone https://github.com/clrmsc/st7796-pi.git st7796-pi
 cd st7796-pi
 sudo ./install.sh
 sudo reboot
