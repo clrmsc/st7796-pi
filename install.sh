@@ -12,7 +12,7 @@ TOUCH=1
 IRQ=17
 INVERT=0
 RGB=0
-CONSOLE=0
+CONSOLE=1
 
 usage() {
     cat <<EOF
@@ -27,7 +27,8 @@ Usage: sudo ./install.sh [options]
   --irq N                 touch IRQ GPIO (default: $IRQ)
   --invert                enable color inversion (IPS panels)
   --rgb                   RGB order instead of BGR (red/blue swapped)
-  --console               show text console on the display (fbcon)
+  --no-console            do not show text console on the display
+                          (panel stays white until an app opens /dev/fb1 or DRM)
   -h, --help              this help
 EOF
 }
@@ -44,6 +45,7 @@ while [[ $# -gt 0 ]]; do
         --invert)   INVERT=1; shift ;;
         --rgb)      RGB=1; shift ;;
         --console)  CONSOLE=1; shift ;;
+        --no-console) CONSOLE=0; shift ;;
         -h|--help)  usage; exit 0 ;;
         *) echo "Unknown option: $1"; usage; exit 1 ;;
     esac
@@ -103,10 +105,10 @@ else
     rm -f "$RULE"
 fi
 
+cp "$CMDLINE" "$CMDLINE.bak-st7796"
+sed -i 's/ *fbcon=map:[0-9]*//' "$CMDLINE"
 if [[ $CONSOLE -eq 1 ]]; then
     echo "==> Enabling console on display ($CMDLINE)"
-    cp "$CMDLINE" "$CMDLINE.bak-st7796"
-    sed -i 's/ *fbcon=map:[0-9]*//' "$CMDLINE"
     # fb0 = HDMI (if present), the SPI panel becomes fb1
     sed -i '1 s/$/ fbcon=map:1/' "$CMDLINE"
 fi

@@ -1,64 +1,106 @@
 # ST7796S SPI-дисплей для Raspberry Pi
 
-Установка 4" SPI-дисплея на ST7796S (480×320) с тачем XPT2046 на Raspberry Pi OS Trixie/Bookworm.
-Используется штатный DRM-драйвер `panel-mipi-dbi`, а не устаревший `fbtft`. Рассчитано на Pi Zero, должно работать на любой Pi.
+Установка 4" SPI-дисплея на ST7796S (480×320) на Raspberry Pi OS Trixie/Bookworm.
+Используется штатный DRM-драйвер `panel-mipi-dbi`, а не устаревший `fbtft`.
+Работает на Raspberry Pi Zero W (Trixie, ядро 6.18).
 
 ## Установка
 
+Если на Pi нет git (на Lite его нет по умолчанию):
+
 ```bash
-git clone https://github.com/clrmsc/st7796-pi.git st7796-pi
-cd st7796-pi
-sudo ./install.sh
+wget -qO- https://github.com/clrmsc/st7796-pi/archive/refs/heads/main.tar.gz | tar xz
+cd st7796-pi-main
+sudo ./install.sh --bl none --no-touch
 sudo reboot
 ```
+
+Или через git:
+
+```bash
+git clone https://github.com/clrmsc/st7796-pi.git
+cd st7796-pi
+sudo ./install.sh --bl none --no-touch
+sudo reboot
+```
+
+`--bl none` нужен, если подсветка (BL/LED) подключена к 3.3V.
+`--no-touch` нужен, если на модуле нет тача XPT2046.
+После перезагрузки на экране появится текстовая консоль.
 
 ## Подключение (SPI0)
 
 | Модуль | Пин Pi | GPIO |
 |---|---|---|
-| VCC | 1 (3.3V) / 2 (5V, если на модуле есть стабилизатор) | — |
+| VCC | 2 (5V) | — |
 | GND | 6 | — |
+| SCL / SCK | 23 | GPIO11 (SCLK) |
+| SDA / SDI / MOSI | 19 | GPIO10 (MOSI) |
+| DC / RS | 18 | GPIO24 |
+| RST / RESET | 22 | GPIO25 |
 | CS | 24 | GPIO8 (CE0) |
-| RESET | 22 | GPIO25 |
-| DC/RS | 18 | GPIO24 |
-| SDI/MOSI | 19 | GPIO10 |
-| SCK | 23 | GPIO11 |
-| LED | 12 | GPIO18 |
-| SDO/MISO | 21 | GPIO9 (можно не подключать) |
-| T_CLK | 23 | GPIO11 |
-| T_DIN | 19 | GPIO10 |
-| T_DO | 21 | GPIO9 |
-| T_CS | 26 | GPIO7 (CE1) |
-| T_IRQ | 11 | GPIO17 |
+| BL / LED | 1 или 17 (3.3V) | — (или GPIO18, пин 12) |
+| SDO / MISO | не нужен | — |
 
-## Опции
+На некоторых модулях подписи DC и RST перепутаны или неочевидны.
+Если экран остаётся белым, запустите `test.py` (см. ниже): он определит правильные пины.
+
+Тач XPT2046 (если есть): T_CLK → 23, T_DIN → 19, T_DO → 21, T_CS → 26 (GPIO7), T_IRQ → 11 (GPIO17).
+
+## Опции `install.sh`
 
 ```
 --rotate 0|90|180|270   ориентация (по умолчанию 90: альбомная, 480x320)
---dc N / --reset N      другие GPIO для DC и RESET
---bl N|none             GPIO подсветки (none: LED подключён к 3.3V)
+--dc N / --reset N      GPIO для DC и RESET (по умолчанию 24 и 25)
+--bl N|none             GPIO подсветки (по умолчанию 18; none, если она на 3.3V)
 --speed HZ              частота SPI (по умолчанию 32 МГц)
 --no-touch              без тача
---irq N                 GPIO прерывания тача
+--irq N                 GPIO прерывания тача (по умолчанию 17)
 --invert                инверсия цветов (часто нужна для IPS)
 --rgb                   поменять местами красный и синий
---console               вывести текстовую консоль на экран
+--no-console            не выводить консоль на экран
 ```
 
 Скрипт можно запускать повторно с другими опциями: старый блок в `config.txt` заменяется.
+Перед изменением сохраняются копии `config.txt.bak-st7796` и `cmdline.txt.bak-st7796`.
 
 ## Если что-то не так
 
-- **Белый экран.** Проверьте DC, RESET и CS. Попробуйте `--speed 16000000`.
-- **Негатив.** Запустите с `--invert`.
+**Экран белый.** Это значит, что подсветка горит, но контроллер не инициализирован.
+
+1. Драйвер включает панель только тогда, когда её кто-то использует.
+   Не отключайте консоль (`--no-console`), пока не убедитесь, что экран работает.
+2. Соберите диагностику: `./diag.sh`. Если в выводе есть `/dev/fb1` и строка
+   `driver=panel-mipi-dbi-spi`, значит, драйвер работает и дело в проводке.
+3. Проверьте железо без драйвера:
+   ```bash
+   sudo apt install -y python3-spidev python3-libgpiod
+   sudo ./test.py
+   ```
+   Скрипт перебирает варианты пинов DC/RST и заливает экран цветами.
+   Номер теста, в котором цвета менялись, показывает правильные `--dc`/`--reset`.
+   После теста выполните `sudo reboot`.
+
+**Другие проблемы:**
+
+- **Негатив.** Запустите установщик с `--invert`.
 - **Красный и синий перепутаны.** Запустите с `--rgb`.
+- **Изображение перевёрнуто.** Используйте `--rotate 270` (или `0`/`180` для портрета).
+- **Артефакты.** Уменьшите скорость SPI: `--speed 16000000`.
 - **Тач реагирует зеркально.** Поправьте матрицу в `/etc/udev/rules.d/99-st7796-touch.rules`.
-- **Диагностика:** `./diag.sh` — собирает всю информацию.
-- **Проверка:** `dmesg | grep -iE 'mipi|panel|ads7846'`, `ls /dev/fb*`.
-  Тест: `cat /dev/urandom | sudo tee /dev/fb1 >/dev/null`.
+
+## Файлы
+
+- `install.sh` — установка.
+- `uninstall.sh` — удаление.
+- `st7796s.txt` — последовательность инициализации ST7796S.
+- `mkfw.py` — сборка `st7796s.txt` в `/lib/firmware/st7796s.bin`.
+- `diag.sh` — диагностика.
+- `test.py` — проверка железа напрямую через SPI.
 
 ## Удаление
 
 ```bash
 sudo ./uninstall.sh
+sudo reboot
 ```
