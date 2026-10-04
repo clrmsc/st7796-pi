@@ -19,7 +19,7 @@ section "cmdline.txt"
 cat "$BOOT/cmdline.txt"
 
 section "firmware"
-ls -l /lib/firmware/st7796s.bin && xxd /lib/firmware/st7796s.bin | head -3
+ls -l /lib/firmware/st7796s.bin && od -An -tx1 /lib/firmware/st7796s.bin | head -3
 
 section "overlay file"
 ls -l "$BOOT"/overlays/mipi-dbi-spi.dtbo
