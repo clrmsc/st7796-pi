@@ -53,6 +53,7 @@ sudo reboot
 - **Негатив.** Запустите с `--invert`.
 - **Красный и синий перепутаны.** Запустите с `--rgb`.
 - **Тач реагирует зеркально.** Поправьте матрицу в `/etc/udev/rules.d/99-st7796-touch.rules`.
+- **Диагностика:** `./diag.sh` — собирает всю информацию.
 - **Проверка:** `dmesg | grep -iE 'mipi|panel|ads7846'`, `ls /dev/fb*`.
   Тест: `cat /dev/urandom | sudo tee /dev/fb1 >/dev/null`.
 

@@ -87,7 +87,7 @@ sed -i '/^# >>> st7796 >>>/,/^# <<< st7796 <<</d' "$CONFIG"
     echo "dtoverlay=mipi-dbi-spi,spi0-0,speed=$SPEED"
     echo "dtparam=compatible=st7796s\\0panel-mipi-dbi-spi"
     echo "dtparam=width=$W,height=$H,width-mm=$WMM,height-mm=$HMM"
-    echo "dtparam=reset-gpio=$RESET,dc-gpio=$DC"
+    echo "dtparam=reset-gpio=$RESET,dc-gpio=$DC,write-only"
     [[ "$BL" != "none" ]] && echo "dtparam=backlight-gpio=$BL"
     if [[ $TOUCH -eq 1 ]]; then
         echo "dtoverlay=ads7846,cs=1,penirq=$IRQ,penirq_pull=2,speed=50000,xohms=150,pmax=255"
